@@ -285,9 +285,24 @@ func (r *CanaryReconciler) Report(ctx *context.Context, canary v1.Canary, result
 
 func (r *CanaryReconciler) Patch(ctx *context.Context, canary *v1.Canary) {
 	r.Log.V(2).Info("patching", "canary", canary.Name, "namespace", canary.Namespace, "status", canary.Status.Status)
-	if err := r.Status().Update(ctx, canary, &client.UpdateOptions{}); err != nil {
+
+	currentCanary := &v1.Canary{}
+	key := types.NamespacedName{
+		Name:      canary.Name,
+		Namespace: canary.Namespace,
+	}
+	erro := r.Get(ctx, key, currentCanary)
+	if erro != nil {
+		r.Log.Error(erro, "Error get Object", "canary", canary.Name)
+		currentCanary = canary
+	}
+
+	currentCanary.Status = canary.Status
+
+	if err := r.Status().Update(ctx, currentCanary, &client.UpdateOptions{}); err != nil {
 		r.Log.Error(err, "failed to patch", "canary", canary.Name)
 	}
+
 }
 
 func (r *CanaryReconciler) includeNamespace(namespace string) bool {
